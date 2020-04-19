@@ -87,17 +87,92 @@ def depthFirstSearch(problem):
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    setOfVisitedNodes = []  # A list for explored nodes
+    fringe = util.Stack()     # DFS uses Stack for Fringe
+    fringe.push((problem.getStartState(), []))  # Push(Node, pathTillNode)
+    while True:
+        popElement = fringe.pop()
+        # print(popElement)
+        node=popElement[0]
+        pathTillNode = popElement[1]
+
+        if problem.isGoalState(node) != False:
+            break
+
+        else:
+            if node not in setOfVisitedNodes:
+                setOfVisitedNodes.append(node)  # Add node to Explored List
+
+                listOfSuccessors = problem.getSuccessors(node)
+                for successor in listOfSuccessors:
+                    # print(successor)
+                    fringe.push(
+                        (successor[0], pathTillNode+[successor[1]]))    # Push(Node, pathTillNode) for child node
+
+    return pathTillNode
+
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    setOfVisitedNodes = []  # A list for explored nodes
+    fringe = util.Queue()  # BFS uses Queue for Fringe
+    fringe.push((problem.getStartState(), []))  # Push(Node, pathTillNode)
+    while True:
+        popElement = fringe.pop()
+        # print(popElement)
+        node = popElement[0]
+        pathTillNode = popElement[1]
+
+        if problem.isGoalState(node) != False:
+            break
+
+        else:
+            if node not in setOfVisitedNodes:
+                setOfVisitedNodes.append(node)  # Add node to Explored List
+
+                listOfSuccessors = problem.getSuccessors(node)
+                for successor in listOfSuccessors:
+                    # print(successor)
+                    fringe.push(
+                        (successor[0], pathTillNode + [successor[1]]))  # Push(Node, pathTillNode) for child node
+
+    return pathTillNode
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    setOfVisitedNodes = []  # A list for explored nodes
+    fringe = util.PriorityQueue()  # UFS uses Priority Queue for Fringe
+    fringe.push((problem.getStartState(), [], 0), 0)  # Push(Node, pathTillNode, cost)
+    while True:
+        popElement = fringe.pop()
+        # print(popElement)
+        node = popElement[0]
+        pathTillNode = popElement[1]
+        costTillNode = popElement[2]
+
+        if problem.isGoalState(node) != False:
+            break
+
+        else:
+            if node not in setOfVisitedNodes:
+                setOfVisitedNodes.append(node)  # Add node to Explored List
+
+                listOfSuccessors = problem.getSuccessors(node)
+                for successor in listOfSuccessors:
+                    # print(successor)
+                    fringe.push(
+                        (successor[0], pathTillNode + [successor[1]], costTillNode+successor[2]),
+                        costTillNode+successor[2])  # Push(Node, pathTillNode, cost) for child node
+
+    return pathTillNode
 
 def nullHeuristic(state, problem=None):
     """
@@ -109,7 +184,33 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    setOfVisitedNodes = []  # A list for explored nodes
+    fringe = util.PriorityQueue()  # Using Priority Queue Data Structure for Fringe
+    fringe.push((problem.getStartState(), [], 0), heuristic(problem.getStartState(), problem) + 0)  # Push(Node, pathTillNode, cost)
+    while True:
+        popElement = fringe.pop()
+        # print(popElement)
+        node = popElement[0]
+        pathTillNode = popElement[1]
+        costTillNode = popElement[2]
+
+        if problem.isGoalState(node) != False:
+            break
+
+        else:
+            if node not in setOfVisitedNodes:
+                setOfVisitedNodes.append(node)  # Add node to Explored List
+
+                listOfSuccessors = problem.getSuccessors(node)
+                for successor in listOfSuccessors:
+                    # print(successor)
+                    fringe.push(
+                        (successor[0], pathTillNode + [successor[1]], costTillNode + successor[2]),
+                        costTillNode + successor[2] + heuristic(successor[0], problem))  # Push(Node, pathTillNode, cost) for child node
+
+    return pathTillNode
 
 
 # Abbreviations

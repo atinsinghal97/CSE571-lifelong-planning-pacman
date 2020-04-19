@@ -295,14 +295,28 @@ class CornersProblem(search.SearchProblem):
         space)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+
+        # print (self.corners)
+        # print (self.startingPosition)
+
+        listOfCorners=list(self.corners)
+        if self.startingPosition in listOfCorners:
+            listOfCorners.remove(self.startingPosition)
+        # print listOfCorners
+        return (self.startingPosition, listOfCorners)
 
     def isGoalState(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+
+        if len(state[1]) != 0: # Goal state is reached when all corners are visited
+            return False
+        else:
+            return True
 
     def getSuccessors(self, state):
         """
@@ -325,6 +339,19 @@ class CornersProblem(search.SearchProblem):
             #   hitsWall = self.walls[nextx][nexty]
 
             "*** YOUR CODE HERE ***"
+
+            listOfCorners = list(state[1])
+
+            x,y = state[0]
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            hitsWall = self.walls[nextx][nexty]
+
+            if hitsWall is False:
+                nextState = (nextx, nexty) # Getting next state index to pass to the successor list
+                if nextState in self.corners and nextState in listOfCorners:
+                    listOfCorners.remove(nextState) # updating nodes remaining to visit
+                successors.append(((nextState, listOfCorners), action, 1))
 
         self._expanded += 1 # DO NOT CHANGE
         return successors
@@ -360,7 +387,25 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    # return 0 # Default to trivial solution
+
+    # Using Manhattan distance function from util.py for Heuristic
+
+    listOfCorners = state[1]
+    # print type(state[1])
+    if len(listOfCorners) == 0:
+        return 0
+
+    # print listOfCorners[0]
+    farCorner = listOfCorners[0]
+    distanceFarCorner = util.manhattanDistance(farCorner, state[0])
+
+    for corner in listOfCorners:
+        if distanceFarCorner < util.manhattanDistance(corner, state[0]):
+            farCorner = corner
+            distanceFarCorner = util.manhattanDistance(farCorner, state[0])
+
+    return distanceFarCorner
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -454,7 +499,16 @@ def foodHeuristic(state, problem):
     """
     position, foodGrid = state
     "*** YOUR CODE HERE ***"
-    return 0
+    # return 0
+
+    try:
+        heuristicFunction = lambda x: mazeDistance(position, x, problem.startingGameState)
+        distance = tuple(map(heuristicFunction, foodGrid.asList()))
+
+        return max(distance)
+
+    except Exception as e:
+        return 0
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -485,7 +539,8 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+        return search.breadthFirstSearch(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
@@ -521,7 +576,17 @@ class AnyFoodSearchProblem(PositionSearchProblem):
         x,y = state
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # util.raiseNotDefined()
+
+        # print(state)
+        # print (x, y)
+        # print(self.food)
+        # print(self.food.asList())
+        # print("")
+        if (x,y) in self.food.asList(): # returns True if there exists food at the current location of pacman
+            return True
+        else:
+            return False
 
 def mazeDistance(point1, point2, gameState):
     """
