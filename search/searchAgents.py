@@ -40,6 +40,8 @@ from game import Actions
 import util
 import time
 import search
+import copy
+
 
 class GoWestAgent(Agent):
     "An agent that goes West until it can't."
@@ -73,7 +75,7 @@ class SearchAgent(Agent):
     Note: You should NOT change any code in SearchAgent
     """
 
-    def __init__(self, fn='depthFirstSearch', prob='PositionSearchProblem', heuristic='nullHeuristic'):
+    def __init__(self, fn='depthFirstSearch', prob='ReplanningSearchProblem', heuristic='nullHeuristic'):
         # Warning: some advanced Python magic is employed below to find the right functions and problems
 
         # Get the search function from the name and heuristic
@@ -133,6 +135,125 @@ class SearchAgent(Agent):
         else:
             return Directions.STOP
 
+
+class ReplanningSearchProblem(search.SearchProblem):
+
+
+    def __init__(self, gameState, costFn=lambda x: 1, goal=(1, 1), start=None, warn=True, visualize=True):
+
+        self.actualWalls = gameState.getWalls()
+        self.naiveWalls = copy.deepcopy(self.actualWalls)
+        self.height = self.actualWalls.height
+        self.width = self.actualWalls.width
+
+        for coord in self.naiveWalls.asList():
+            if coord[1] == 0 or coord[1] == self.width:
+                continue
+            if coord[0] == 0 or coord[0] == self.height:
+                continue
+            self.naiveWalls[coord[0]][coord[1]] = False  # we don't know about any walls at the start
+
+        top, right = self.height - 2, self.width - 2
+        for x in range(1, self.width - 1):
+            for y in range(1, self.height - 1):
+                self.naiveWalls[x][y] = False
+        print (self.width, self.height)
+        self.startState = gameState.getPacmanPosition()
+        if start is not None:
+            self.startState = start
+        self.goal = goal
+        self.costFn = costFn
+        self.visualize = visualize
+        if warn and (gameState.getNumFood() != 1 or not gameState.hasFood(*goal)):
+            print 'Warning: this does not look like a regular search maze'
+
+
+        self._visited, self._visitedlist, self._expanded = {}, [], 0  # DO NOT CHANGE
+
+    def getNaiveWalls(self):
+        return self.naiveWalls
+
+    def getGoalState(self):
+        return self.goal
+
+    def getDims(self):
+        return (self.width, self.height)
+
+    def getStartState(self):
+        return self.startState
+
+    def setStartState(self, x, y):
+        self.startState = (x, y)
+
+    def setNaiveWalls(self, x, y):
+        self.naiveWalls[x][y] = True
+
+    def isWall(self, x, y):
+        return self.actualWalls[x][y]
+
+    def isNaiveWall(self, x, y):
+        return self.naiveWalls[x][y]
+
+    def isGoalState(self, state):
+        isGoal = state == self.goal
+
+        # For display purposes only
+        if isGoal and self.visualize:
+            self._visitedlist.append(state)
+            import __main__
+            if '_display' in dir(__main__):
+                if 'drawExpandedCells' in dir(__main__._display):  # @UndefinedVariable
+                    __main__._display.drawExpandedCells(self._visitedlist)  # @UndefinedVariable
+
+        return isGoal
+
+    def getSuccessors(self, state):
+        """
+        Returns successor states, the actions they require, and a cost of 1.
+
+         As noted in search.py:
+             For a given state, this should return a list of triples,
+         (successor, action, stepCost), where 'successor' is a
+         successor to the current state, 'action' is the action
+         required to get there, and 'stepCost' is the incremental
+         cost of expanding to that successor
+        """
+
+        successors = []
+        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            x, y = state
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if nextx >= 0 and nextx < self.width and nexty >= 0 and nexty < self.height and not self.naiveWalls[nextx][nexty]:
+                nextState = (nextx, nexty)
+                cost = self.costFn(nextState)
+                successors.append((nextState, action, cost))
+
+        # Bookkeeping for display purposes
+        self._expanded += 1  # DO NOT CHANGE
+        # if state not in self._visited:
+        #     self._visited[state] = True
+        #     self._visitedlist.append(state)
+
+        return successors
+
+    def getCostOfActions(self, actions):
+        """
+        Returns the cost of a particular sequence of actions. If those actions
+        include an illegal move, return 999999.
+        """
+        if actions == None: return 999999
+        x, y = self.getStartState()
+        cost = 0
+        for action in actions:
+            # Check figure out the next state and see whether its' legal
+            dx, dy = Actions.directionToVector(action)
+            x, y = int(x + dx), int(y + dy)
+            if self.naiveWalls[x][y]: return 999999
+            cost += self.costFn((x, y))
+        return cost
+
+
 class PositionSearchProblem(search.SearchProblem):
     """
     A search problem defines the state space, start state, goal test, successor
@@ -179,6 +300,9 @@ class PositionSearchProblem(search.SearchProblem):
                     __main__._display.drawExpandedCells(self._visitedlist) #@UndefinedVariable
 
         return isGoal
+
+    def getGoalState(self):
+        return self.goal
 
     def getSuccessors(self, state):
         """
@@ -289,7 +413,7 @@ class CornersProblem(search.SearchProblem):
         # in initializing the problem
         "*** YOUR CODE HERE ***"
 
-    def getStartState(self):
+    def getStartState(self):    # different
         """
         Returns the start state (in your state space, not the full Pacman state
         space)
@@ -306,7 +430,7 @@ class CornersProblem(search.SearchProblem):
         # print listOfCorners
         return (self.startingPosition, listOfCorners)
 
-    def isGoalState(self, state):
+    def isGoalState(self, state):   # different
         """
         Returns whether this search state is a goal state of the problem.
         """

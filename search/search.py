@@ -18,6 +18,19 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from game import Actions, Directions
+import dStarLite as dsl
+import math
+
+
+def l1_dist(coord1, coord2): # use manhattan distance from util.py instead?
+    p1, p2, q1, q2 = coord1 + coord2
+    return abs(p1 - q1) + abs(p2 - q2)
+
+
+def l2_dist(coord1, coord2):
+    p1, p2, q1, q2 = coord1 + coord2
+    return math.sqrt(((q1 - p1) ** 2) + ((q2 - p2) ** 2))
 
 class SearchProblem:
     """
@@ -181,6 +194,7 @@ def nullHeuristic(state, problem=None):
     """
     return 0
 
+'''
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
@@ -211,6 +225,131 @@ def aStarSearch(problem, heuristic=nullHeuristic):
                         costTillNode + successor[2] + heuristic(successor[0], problem))  # Push(Node, pathTillNode, cost) for child node
 
     return pathTillNode
+'''
+
+
+def aStarSearch(problem, heuristic=nullHeuristic):
+    already_visisted = set()
+    curr_state = problem.getStartState()
+    bfs_pr_queue = util.PriorityQueue()
+    bfs_pr_queue.push((curr_state, []), 0)
+    while bfs_pr_queue.isEmpty() != True:
+        state = bfs_pr_queue.pop()
+        #print state
+        curr_state = state[0]
+        next_states = state[1]
+        # value_curr = state[1]
+        if problem.isGoalState(curr_state) == True:
+            return next_states
+        if already_visisted.__contains__(str(curr_state)) == False:
+            already_visisted.add(str(curr_state))
+            for states in problem.getSuccessors(curr_state):
+                if already_visisted.__contains__(str(states[0])) == False:
+                    curr_cost = problem.getCostOfActions(next_states + [states[1]])
+                    heuristic_cost = heuristic(states[0],problem)
+                    bfs_pr_queue.push((states[0], next_states + [states[1]]), curr_cost+heuristic_cost)
+
+
+def getCoordinate(curr_x, curr_y, action):
+    dx, dy = Actions.directionToVector(action)
+    next_x, next_y = int(curr_x + dx), int(curr_y + dy)
+    return next_x, next_y
+
+
+def actionListToCoordList(start_x, start_y, action_list):
+    coord_list = []
+    for action in action_list:
+        coord_list.append((start_x, start_y))
+        start_x, start_y = getCoordinate(start_x, start_y, action)
+    return coord_list
+
+
+def getDirection(coord, nextCoord):
+    curr_x = coord[0]
+    next_x = nextCoord[0]
+    curr_y = coord[1]
+    next_y = nextCoord[1]
+    if curr_x - next_x < 0:
+        return Directions.EAST
+    elif curr_x - next_x > 0:
+        return Directions.WEST
+    elif curr_y - next_y < 0:
+        return Directions.NORTH
+    else:
+        return Directions.SOUTH
+
+
+def coordListToActionList(coord_list):
+    directions = []
+    for index in range(len(coord_list) - 1):
+        coord = coord_list[index]
+        nextCoord = coord_list[index + 1]
+        direction = getDirection(coord, nextCoord)
+        directions.append(direction)
+    return directions
+
+
+def naiveReplanningAStarSearch(problem, heuristic):
+    """
+    Applies AStarSearch in the scenario where the agent only knows the goal
+    state and does not know the location of the walls.  When the agent finds out
+    a location of a wall from its successor states, it will need to restart the
+    AStarSearch.
+
+    We can initally test the implementation of this algorithm with tinyMaze grid
+    using this command:
+    python pacman.py -l tinyMaze -p SearchAgent -a fn=nrastar,prob=ReplanningSearchProblem,heuristic=manhattanHeuristic
+
+    Then we can verify that the algorithm works with other grids, using the
+    layouts from the layouts/ directory.
+    """
+    startState = problem.getStartState()
+    curr_x, curr_y = startState[0], startState[1]
+    pathSoFar = []
+    action_list = aStarSearch(problem, heuristic)
+    while not problem.isGoalState((curr_x, curr_y)):
+        pathSoFar.append((curr_x, curr_y))
+        next_x, next_y = getCoordinate(curr_x, curr_y, action_list.pop(0))
+
+        # see the adjacent walls
+        for adjacent_direction in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            adj_x, adj_y = getCoordinate(curr_x, curr_y, adjacent_direction)
+            if not problem.isNaiveWall(adj_x, adj_y) and \
+                    problem.isWall(adj_x, adj_y):
+                problem.setNaiveWalls(adj_x, adj_y)
+
+        # replan only if needed (i.e. we're about to bonk against a wall)
+        if problem.isNaiveWall(next_x, next_y):
+            action_list = aStarSearch(problem, heuristic)
+            next_x, next_y = getCoordinate(curr_x, curr_y, action_list.pop(0))
+
+        curr_x, curr_y = next_x, next_y
+        problem.setStartState(curr_x, curr_y)
+
+    pathSoFar.append((curr_x, curr_y))
+    actions = coordListToActionList(pathSoFar)
+    problem.setStartState(startState[0], startState[1])  # reset the start state, for accurate path cost eval
+    return actions
+
+
+def DStarLiteSearch(problem):
+    startState = problem.getStartState()
+    x, y = startState[0], startState[1]
+    dstarlite_obj = dsl.DStarLite(problem,l1_dist)
+    print("goal State")
+    print(problem.getGoalState())
+
+    while (x, y) != problem.getGoalState():
+        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if problem.isWall(nextx, nexty):
+                dstarlite_obj.make_wall_at((nextx, nexty))
+        x, y = dstarlite_obj.take_step()
+    path = dstarlite_obj.get_route()
+    directions = coordListToActionList(path)
+    problem._expanded = dstarlite_obj._pop_count
+    return directions
 
 
 # Abbreviations
@@ -218,3 +357,5 @@ bfs = breadthFirstSearch
 dfs = depthFirstSearch
 astar = aStarSearch
 ucs = uniformCostSearch
+nrastar = naiveReplanningAStarSearch
+dstarlite = DStarLiteSearch
